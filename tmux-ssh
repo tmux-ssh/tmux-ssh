@@ -1,10 +1,49 @@
-#!/bin/sh
+#!/usr/bin/env bash
+set -e
 
 hosts=""
 ssh_cmd=ssh
 ssh_options=""
 tmux_name="cssh"
 tmux_attach_current_session="false"
+
+# Get the config file path if it exists
+get_config_file() {
+  if [[ -f "$HOME/.tmux-ssh.conf" ]]; then
+    echo "$HOME/.tmux-ssh.conf"
+  elif [[ -f "$HOME/.config/tmux-ssh/tmux-ssh.conf" ]]; then
+    echo "$HOME/.config/tmux-ssh/tmux-ssh.conf"
+  fi
+}
+
+# Get hosts for a group from the config file
+get_group_hosts() {
+  local group="$1"
+  local config_file
+  config_file=$(get_config_file)
+
+  [[ -z "$config_file" ]] && return 1
+
+  awk -v group="$group" '
+    /^\[.*\]$/ { in_group = ($0 == "[" group "]") }
+    in_group && !/^\[/ && !/^$/ && !/^#/ { print }
+  ' "$config_file"
+}
+
+# List all available groups from the config file
+list_groups() {
+  local config_file
+  config_file=$(get_config_file)
+
+  if [[ -z "$config_file" ]]; then
+    echo "No config file found" >&2
+    echo "Create one at ~/.tmux-ssh.conf or ~/.config/tmux-ssh/tmux-ssh.conf" >&2
+    exit 1
+  fi
+
+  echo "Available groups:"
+  grep -E '^\[.+\]$' "$config_file" | tr -d '[]'
+}
 
 usage() {
   echo "Usage: $0 [options] host [host ...]" >&2
@@ -13,17 +52,22 @@ usage() {
   echo "" >&2
   echo "Options:" >&2
   echo "  -h                  Show help" >&2
-  echo "  -p                  Use a different program instad of ssh" >&2
+  echo "  -l                  List available groups from config file" >&2
+  echo "  -p                  Use a different program instead of ssh" >&2
   echo "  -c                  Use the current tmux session and just spawn a new window instead" >&2
   echo "  -n <name>           Name of the tmux session or window (default: cssh)" >&2
   echo "  -o <ssh args>       Additional SSH arguments" >&2
+  echo "" >&2
+  echo "Config file locations (checked in order):" >&2
+  echo "  ~/.tmux-ssh.conf" >&2
+  echo "  ~/.config/tmux-ssh/tmux-ssh.conf" >&2
 }
 
-while [ $# -ne 0 ]; do
+while [[ $# -ne 0 ]]; do
   case $1 in
     -n)
       shift
-      if [ $# -eq 0 ]; then
+      if [[ $# -eq 0 ]]; then
         usage
         exit 2
       fi
@@ -36,7 +80,7 @@ while [ $# -ne 0 ]; do
       ;;
     -p)
       shift
-      if [ $# -eq 0 ]; then
+      if [[ $# -eq 0 ]]; then
         usage
         exit 2
       fi
@@ -45,12 +89,16 @@ while [ $# -ne 0 ]; do
       ;;
     -o)
       shift
-      if [ $# -eq 0 ]; then
+      if [[ $# -eq 0 ]]; then
         usage
         exit 2
       fi
       ssh_options="$1"
       shift
+      ;;
+    -l)
+      list_groups
+      exit 0
       ;;
     -h)
       usage
@@ -67,9 +115,17 @@ while [ $# -ne 0 ]; do
   esac
 done
 
-if [ -z "${hosts}" ]; then
+if [[ -z "${hosts}" ]]; then
   usage
   exit 2
+fi
+
+# Check if argument is a group name in config (only if single argument with no spaces)
+if [[ -z $(echo "${hosts}" | grep ' ') ]]; then
+  group_hosts=$(get_group_hosts "${hosts}" 2>/dev/null || true)
+  if [[ -n "$group_hosts" ]]; then
+    hosts="$group_hosts"
+  fi
 fi
 
 # Find a name for a new session
@@ -77,7 +133,7 @@ n=0
 while tmux has-session -t "${tmux_name}-${n}" 2>/dev/null; do n=$((n + 1)); done
 tmux_session="${tmux_name}-${n}"
 
-if [ "${tmux_attach_current_session}" = "true" ]; then
+if [[ "${tmux_attach_current_session}" = "true" ]]; then
   tmux_session="$(tmux display-message -p '#S')"
   # Find a name for a new window
   n=0
@@ -86,26 +142,11 @@ if [ "${tmux_attach_current_session}" = "true" ]; then
   tmux_window_options="-n ${tmux_window}"
 fi
 
-# If host doesn't look like a DNS name, it may be a CSSH cluster
-if ! echo "${hosts}" | grep -q '[. ]'; then
-  for cfg in "${HOME}/.clusterssh/clusters" /etc/clusters; do
-    if [ -r "${cfg}" ]; then
-      h="$(sed -n "s/^${hosts} //p" <"${cfg}")"
-      if [ -n "${h}" ]; then
-        hosts="${h}"
-        break
-      fi
-    fi
-    # If there was no corresponding cluster name,
-    # just assume we have an unqualified domain name
-  done
-fi
-
 # Open a new session and split into new panes for each SSH session
 for host in ${hosts}; do
   if ! tmux has-session -t "${tmux_session}" 2>/dev/null; then
     tmux new-session -s "${tmux_session}" -d "${ssh_cmd} ${ssh_options} ${host}"
-  elif [ "${tmux_attach_current_session}" = "true" ]; then
+  elif [[ "${tmux_attach_current_session}" = "true" ]]; then
     if ! tmux list-windows -F "#W" | grep -q "${tmux_window}" >/dev/null; then
       # shellcheck disable=SC2086
       tmux new-window ${tmux_window_options} "${ssh_cmd} ${ssh_options} ${host}"
@@ -124,13 +165,13 @@ for host in ${hosts}; do
 done
 
 # Synchronize panes by default
-if [ "${tmux_attach_current_session}" = "true" ]; then
+if [[ "${tmux_attach_current_session}" = "true" ]]; then
   tmux set-window-option -t "${tmux_window}" synchronize-panes on
 else
   tmux set-window-option -t "${tmux_session}" synchronize-panes on
 fi
 
-if [ -n "${TMUX}" ]; then
+if [[ -n "${TMUX}" ]]; then
   # We are in a tmux, just switch to the new session
   tmux switch-client -t "${tmux_session}"
 else
