@@ -128,17 +128,25 @@ if [[ -z $(echo "${hosts}" | grep ' ') ]]; then
   fi
 fi
 
-# Find a name for a new session
-n=0
-while tmux has-session -t "${tmux_name}-${n}" 2>/dev/null; do n=$((n + 1)); done
-tmux_session="${tmux_name}-${n}"
+# Find a name for a new session (try bare name first, then add numbers for collisions)
+if ! tmux has-session -t "${tmux_name}" 2>/dev/null; then
+  tmux_session="${tmux_name}"
+else
+  n=1
+  while tmux has-session -t "${tmux_name}-${n}" 2>/dev/null; do n=$((n + 1)); done
+  tmux_session="${tmux_name}-${n}"
+fi
 
 if [[ "${tmux_attach_current_session}" = "true" ]]; then
   tmux_session="$(tmux display-message -p '#S')"
-  # Find a name for a new window
-  n=0
-  while tmux list-windows -F "#W" | grep -q "${tmux_name}-${n}" 2>/dev/null; do n=$((n + 1)); done
-  tmux_window="${tmux_name}-${n}"
+  # Find a name for a new window (try bare name first, then add numbers for collisions)
+  if ! tmux list-windows -F "#W" | grep -q "^${tmux_name}$" 2>/dev/null; then
+    tmux_window="${tmux_name}"
+  else
+    n=1
+    while tmux list-windows -F "#W" | grep -q "^${tmux_name}-${n}$" 2>/dev/null; do n=$((n + 1)); done
+    tmux_window="${tmux_name}-${n}"
+  fi
   tmux_window_options="-n ${tmux_window}"
 fi
 
