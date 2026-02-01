@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# Check for required dependencies
+if ! command -v tmux &>/dev/null; then
+  echo "Error: tmux is not installed. Please install tmux and try again." >&2
+  exit 1
+fi
+
 hosts=""
 ssh_cmd=ssh
 ssh_options=""
