@@ -1,5 +1,7 @@
 # tmux-ssh
 
+[![Test](https://github.com/tmux-ssh/tmux-ssh/actions/workflows/test.yml/badge.svg)](https://github.com/tmux-ssh/tmux-ssh/actions/workflows/test.yml)
+
 A command-line tool that spawns multiple synchronized SSH sessions inside a tmux session. Type once, execute everywhere.
 
 ## What Problem Does This Solve?
