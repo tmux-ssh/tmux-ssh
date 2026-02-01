@@ -190,6 +190,22 @@ Once connected, all your keystrokes are mirrored to every pane. This is controll
 | Detach from session | `Ctrl+b d` |
 | Reattach to session | `tmux attach -t tmux-ssh` |
 
+### Recommended: Add a Keybinding for Toggling Sync
+
+Add this to your `~/.tmux.conf` to toggle pane synchronization with `Ctrl+b =`:
+
+```bash
+bind-key = set-window-option synchronize-panes
+```
+
+Then reload your tmux config:
+
+```bash
+tmux source-file ~/.tmux.conf
+```
+
+Now you can quickly toggle sync on/off with `Ctrl+b =` instead of typing the full command.
+
 ## Testing
 
 ### Run the Test Suite
