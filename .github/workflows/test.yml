@@ -8,17 +8,102 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu versions
+          - os: ubuntu-24.04
+            name: Ubuntu 24.04
+          - os: ubuntu-22.04
+            name: Ubuntu 22.04
+          - os: ubuntu-20.04
+            name: Ubuntu 20.04
+
+          # Other distributions via containers
+          - os: ubuntu-latest
+            container: debian:bookworm
+            name: Debian 12 (Bookworm)
+          - os: ubuntu-latest
+            container: debian:bullseye
+            name: Debian 11 (Bullseye)
+          - os: ubuntu-latest
+            container: fedora:40
+            name: Fedora 40
+          - os: ubuntu-latest
+            container: fedora:39
+            name: Fedora 39
+          - os: ubuntu-latest
+            container: archlinux:latest
+            name: Arch Linux
+          - os: ubuntu-latest
+            container: alpine:3.19
+            name: Alpine 3.19
+          - os: ubuntu-latest
+            container: rockylinux:9
+            name: Rocky Linux 9
+          - os: ubuntu-latest
+            container: amazonlinux:2023
+            name: Amazon Linux 2023
+
+          # macOS
+          - os: macos-15
+            name: macOS 15 (Sequoia)
+          - os: macos-26
+            name: macOS 26 (Tahoe)
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    name: ${{ matrix.name }}
 
     steps:
+      - name: Install dependencies (Debian/Ubuntu)
+        if: contains(matrix.container, 'debian') || (!matrix.container && contains(matrix.os, 'ubuntu'))
+        run: |
+          apt-get update
+          apt-get install -y tmux bash git
+
+      - name: Install dependencies (Fedora)
+        if: contains(matrix.container, 'fedora')
+        run: |
+          dnf install -y tmux bash git
+
+      - name: Install dependencies (Arch)
+        if: contains(matrix.container, 'archlinux')
+        run: |
+          pacman -Sy --noconfirm tmux bash git
+
+      - name: Install dependencies (Alpine)
+        if: contains(matrix.container, 'alpine')
+        run: |
+          apk add --no-cache tmux bash git
+
+      - name: Install dependencies (Rocky/RHEL)
+        if: contains(matrix.container, 'rockylinux')
+        run: |
+          dnf install -y tmux bash git
+
+      - name: Install dependencies (Amazon Linux)
+        if: contains(matrix.container, 'amazonlinux')
+        run: |
+          dnf install -y tmux bash git
+
+      - name: Install dependencies (macOS)
+        if: contains(matrix.os, 'macos')
+        run: |
+          brew install tmux
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install tmux
-        run: sudo apt-get update && sudo apt-get install -y tmux
-
       - name: Make scripts executable
         run: chmod +x tmux-ssh test.sh
+
+      - name: Show versions
+        run: |
+          echo "Bash version: $(bash --version | head -1)"
+          echo "Tmux version: $(tmux -V)"
+          echo "OS: $(cat /etc/os-release 2>/dev/null | grep PRETTY_NAME || sw_vers 2>/dev/null || echo 'Unknown')"
 
       - name: Start tmux server
         run: tmux start-server
@@ -28,6 +113,7 @@ jobs:
 
   shellcheck:
     runs-on: ubuntu-latest
+    name: Shellcheck
 
     steps:
       - name: Checkout code
