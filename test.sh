@@ -113,13 +113,12 @@ test_list_groups() {
 
 # Test: Group expansion returns hosts
 test_group_expansion() {
-  # Source the functions for direct testing
-  source <(sed -n '/^get_config_file/,/^}/p' "$TMUX_SSH")
-  source <(sed -n '/^get_group_hosts/,/^}/p' "$TMUX_SSH")
-
-  export HOME="$SCRIPT_DIR"
+  # Test config parsing using awk (portable across GNU/BSD)
   local hosts
-  hosts=$(get_group_hosts "test-group-1")
+  hosts=$(awk -v group="test-group-1" '
+    /^\[.*\]$/ { in_group = ($0 == "[" group "]") }
+    in_group && !/^\[/ && !/^$/ && !/^#/ { print }
+  ' "$TEST_CONFIG")
 
   if echo "$hosts" | grep -q "host1.example.com" && echo "$hosts" | grep -q "host2.example.com"; then
     pass "Group expansion returns correct hosts"
@@ -130,12 +129,12 @@ test_group_expansion() {
 
 # Test: Unknown group returns empty
 test_unknown_group() {
-  source <(sed -n '/^get_config_file/,/^}/p' "$TMUX_SSH")
-  source <(sed -n '/^get_group_hosts/,/^}/p' "$TMUX_SSH")
-
-  export HOME="$SCRIPT_DIR"
+  # Test config parsing using awk (portable across GNU/BSD)
   local hosts
-  hosts=$(get_group_hosts "nonexistent-group" 2>/dev/null || true)
+  hosts=$(awk -v group="nonexistent-group" '
+    /^\[.*\]$/ { in_group = ($0 == "[" group "]") }
+    in_group && !/^\[/ && !/^$/ && !/^#/ { print }
+  ' "$TEST_CONFIG")
 
   if [[ -z "$hosts" ]]; then
     pass "Unknown group returns empty"

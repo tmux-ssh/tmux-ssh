@@ -58,11 +58,17 @@ jobs:
     name: ${{ matrix.name }}
 
     steps:
-      - name: Install dependencies (Debian/Ubuntu)
-        if: contains(matrix.container, 'debian') || (!matrix.container && contains(matrix.os, 'ubuntu'))
+      - name: Install dependencies (Debian container)
+        if: contains(matrix.container, 'debian')
         run: |
           apt-get update
           apt-get install -y tmux bash git
+
+      - name: Install dependencies (Ubuntu native)
+        if: "!matrix.container && contains(matrix.os, 'ubuntu')"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux
 
       - name: Install dependencies (Fedora)
         if: contains(matrix.container, 'fedora')
