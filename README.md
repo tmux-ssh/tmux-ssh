@@ -251,6 +251,15 @@ With many hosts, panes may become too small. Consider:
 - Connecting to fewer hosts at once
 - Using `Ctrl+b z` to zoom into individual panes
 
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+
+- Submitting issues and feature requests
+- Opening pull requests
+- Commit message conventions
+- Running tests
+
 ## Credits
 
 This project is based on [tmux-cssh](https://github.com/peikk0/tmux-cssh) by Pierre Guinoiseau, licensed under the MIT License.
