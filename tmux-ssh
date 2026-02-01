@@ -4,7 +4,7 @@ set -e
 hosts=""
 ssh_cmd=ssh
 ssh_options=""
-tmux_name="cssh"
+tmux_name="tmux-ssh"
 tmux_attach_current_session="false"
 
 # Get the config file path if it exists
