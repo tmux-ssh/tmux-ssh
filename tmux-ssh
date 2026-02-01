@@ -127,7 +127,7 @@ if [[ -z "${hosts}" ]]; then
 fi
 
 # Check if argument is a group name in config (only if single argument with no spaces)
-if [[ -z $(echo "${hosts}" | grep ' ') ]]; then
+if ! echo "${hosts}" | grep -q ' '; then
   group_hosts=$(get_group_hosts "${hosts}" 2>/dev/null || true)
   if [[ -n "$group_hosts" ]]; then
     hosts="$group_hosts"
