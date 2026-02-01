@@ -6,6 +6,7 @@ ssh_cmd=ssh
 ssh_options=""
 tmux_name="tmux-ssh"
 tmux_attach_current_session="false"
+tmux_detached="false"
 
 # Get the config file path if it exists
 get_config_file() {
@@ -53,6 +54,7 @@ usage() {
   echo "Options:" >&2
   echo "  -h                  Show help" >&2
   echo "  -l                  List available groups from config file" >&2
+  echo "  -d                  Detached mode - create session but don't attach" >&2
   echo "  -p                  Use a different program instead of ssh" >&2
   echo "  -c                  Use the current tmux session and just spawn a new window instead" >&2
   echo "  -n <name>           Name of the tmux session or window (default: tmux-ssh)" >&2
@@ -76,6 +78,10 @@ while [[ $# -ne 0 ]]; do
       ;;
     -c)
       tmux_attach_current_session="true"
+      shift
+      ;;
+    -d)
+      tmux_detached="true"
       shift
       ;;
     -p)
@@ -179,7 +185,9 @@ else
   tmux set-window-option -t "${tmux_session}" synchronize-panes on
 fi
 
-if [[ -n "${TMUX}" ]]; then
+if [[ "${tmux_detached}" = "true" ]]; then
+  echo "Created session: ${tmux_session}"
+elif [[ -n "${TMUX}" ]]; then
   # We are in a tmux, just switch to the new session
   tmux switch-client -t "${tmux_session}"
 else
