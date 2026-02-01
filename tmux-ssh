@@ -55,7 +55,7 @@ usage() {
   echo "  -l                  List available groups from config file" >&2
   echo "  -p                  Use a different program instead of ssh" >&2
   echo "  -c                  Use the current tmux session and just spawn a new window instead" >&2
-  echo "  -n <name>           Name of the tmux session or window (default: cssh)" >&2
+  echo "  -n <name>           Name of the tmux session or window (default: tmux-ssh)" >&2
   echo "  -o <ssh args>       Additional SSH arguments" >&2
   echo "" >&2
   echo "Config file locations (checked in order):" >&2
